@@ -1,4 +1,4 @@
-# quantumQateEmulator
+# quantumGateEmulator
 James Kiessling, Daniel Williams, Christian D'Ovidio
 A web accessible, VHDL based quantum gate emulator that runs on the DE10 platform
 
