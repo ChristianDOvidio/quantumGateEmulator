@@ -9,8 +9,8 @@ In order to use the emulation, the following source code must be available:
 * Compiled C executables (or .c source files + build script) – `write_input.c`, `write_gate.c`, `read_output.c`
 
 # Dependencies:
-Python 3.5+
-Flask
+* Python 3.5+
+* Flask
 
 # Steps:
 1. Connect the DE10-nano to the internet by Ethernet cable
