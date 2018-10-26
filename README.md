@@ -16,7 +16,7 @@ In order to use the emulation, the following source code must be available:
 1. Connect the DE10-nano to the internet by Ethernet cable
 2. Restore the archived Quartus project and compile
 3. Move the website source code and the C executables to the uSD card on the DE10-nano
-4. To compile the C executables from the source (if they aren’t already compiled), use the “build_app.sh” script :
+4. To compile the C executables from the source (if they aren’t already compiled), use the `build_app.sh` script :
 `<./build_app.sh source_file.c>`
 5. Make sure the C executables are in a folder named “c” in the website directory. The “c” folder must be at the same directory level as the `quantum.py`, `static` and `templates` folders 
 6. Make sure that the C executables, as well as the “c” directory, have appropriate permissions - 
