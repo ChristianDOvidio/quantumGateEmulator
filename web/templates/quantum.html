@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link href="https://fonts.googleapis.com/css?family=Gugi|Roboto" rel="stylesheet">
+	<style>
+		* {
+			box-sizing: border-box;
+		}
+
+		@media only screen and (max-width:800px) {
+			/* For tablets: */
+			.main {
+				width: 80%;
+				padding: 0;
+			}
+			.right {
+				width: 100%;
+			}
+		}
+
+		@media only screen and (max-width:500px) {
+			/* For mobile phones: */
+			.menu,
+			.main,
+			.right {
+				width: 100%;
+			}
+		}
+
+		vp {
+			writing-mode: vertical-lr;
+			/*text-orientation: mixed;*/
+		}
+
+		#sourceDiv {
+			width: 85px;
+			height: 85px;
+			padding: 0px;
+			border: 0px solid #aaaaaa;
+		}
+
+		.table {
+			empty-cells: show;
+		}
+
+		.sidenav {
+			height: 100%;
+			width: 190px;
+			position: fixed;
+			z-index: 1;
+			top: 0;
+			left: 0;
+			background-color: #f7f8f9;
+			overflow-x: hidden;
+			padding-top: 1px;
+		}
+
+		.blankBack {
+			background-image: url(/static/img/blank_85.gif);
+		}
+
+		.blankRow {
+			height: 85px !important;
+		}
+
+		.blankRowSmall {
+			height: 20px !important;
+		}
+
+		.blankCol {
+			width: 85px !important;
+		}
+
+		.main {
+			margin-left: 220px;
+			/* Same as the width of the sidenav */
+			font-size: 28px;
+			/* Increased text to enable scrolling */
+			padding: 0px 10px;
+		}
+	</style>
+</head>
+
+<body style="font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;" background="/static/img/grid.png">
+
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+	<script type="text/javascript">
+
+
+		window.onload = function WindowLoad(event) {
+			// ajax the JSON to the server
+			var returnArray = new Array(8);//creates array of length 2
+			returnArray[0] = "initialize";
+			returnArray[1] = "unused";
+			returnArray[2] = "unused";
+			returnArray[3] = "unused";
+			returnArray[4] = "unused";
+			returnArray[5] = "unused";
+			returnArray[6] = "unused";
+			returnArray[7] = "unused";
+			var JSONData = JSON.stringify(returnArray);
+			$.post("receiver", JSONData, function (data, status) {
+				//do stuff when server replies
+				//alert("Server responded with " + data)
+			});
+		}
+
+		function allowDrop(ev) {
+			ev.preventDefault();
+
+		}
+
+		function drag(ev) {
+			ev.dataTransfer.setData("text", ev.target.id);
+		}
+
+		function startDrop(ev, target) {
+			//drag and drop from source to start gate
+			ev.preventDefault();
+			var data = ev.dataTransfer.getData("text");
+			var returnArray = new Array(8) //creates array of length 4
+			if (data == "oneStart" || data == "zeroStart") {
+				//only allow start states to drop
+				(document.getElementById(target).getElementsByTagName('img')[0]).remove(); //remove gate
+				var nodeCopy = document.getElementById(data).cloneNode(true);
+				nodeCopy.id = data;
+				document.getElementById(target).appendChild(nodeCopy);
+				returnArray[0] = data;
+				returnArray[1] = target;
+				returnArray[2] = "unused";
+				returnArray[3] = "unused";
+				returnArray[4] = "unused";
+				returnArray[5] = "unused";
+				returnArray[6] = "unused";
+				returnArray[7] = "unused";
+				submitGate(returnArray);
+			}
+		}
+
+		function drop(ev) {
+			//drag and drop from destination to trash
+			var numGatesInRow = 9;
+			ev.preventDefault();
+			var data = ev.dataTransfer.getData("text");
+			var subString = String(data).substring(0, 7); //ignore index
+			var divIndex = String(data);
+			divIndex = divIndex.substring(7, divIndex.length); //ignore 'destDiv'
+			var parsedGate = String(ev.dataTransfer.getData('text/html')).split('/img/')[1]; //this and following line
+			parsedGate = parsedGate.substr(0, parsedGate.indexOf(".gif")); //get name of gate being dragged
+			var returnArray = new Array(8);//creates array of length 2
+			returnArray[0] = 'remove';
+
+			if (subString == "destDiv") {
+				//only allow destDivs to be dropped in
+				if (parsedGate == "CNOTGate") {
+					var conIndex = (divIndex - numGatesInRow);
+					var connected = "destDiv" + String(conIndex);
+					(document.getElementById(connected).getElementsByTagName('img')[0]).remove(); //remove bypass
+					(document.getElementById(data).getElementsByTagName('img')[0]).remove(); //remove gate
+					returnArray[1] = data;
+					connectedPrev = "destDiv" + String(Number(divIndex) - 1); //left and right gates
+					connectedNext = "destDiv" + String(Number(divIndex) + 1);
+					connectedPrevUp = "destDiv" + String(Number((divIndex) - numGatesInRow) - 1); //left and right gates, one row up
+					connectedNextUp = "destDiv" + String(Number((divIndex) - numGatesInRow) + 1);
+					if (document.getElementById(connectedPrev)) {
+						if ((document.getElementById(connectedPrev).getElementsByTagName('img')[0])) {
+							returnArray[2] = gateParse(connectedPrev).slice(0, -4); //gate exists in this space
+						} else {
+							returnArray[2] = "bypass"; //no gate exists in this space
+						}
+					} else {
+						returnArray[2] = "input"; //gate is in first column
+					}
+
+					if (document.getElementById(connectedNext)) {
+						if ((document.getElementById(connectedNext).getElementsByTagName('img')[0])) {
+							returnArray[3] = gateParse(connectedNext).slice(0, -4);
+						} else {
+							returnArray[3] = "bypass";
+						}
+					} else {
+						returnArray[3] = "result"; //gate is in last column
+					}
+
+					if (document.getElementById(connectedPrevUp)) {
+						if ((document.getElementById(connectedPrevUp).getElementsByTagName('img')[0])) {
+							returnArray[4] = gateParse(connectedPrevUp).slice(0, -4);
+						} else {
+							returnArray[4] = "bypass";
+						}
+					} else {
+						returnArray[4] = "input";
+					}
+
+					if (document.getElementById(connectedNextUp)) {
+						if ((document.getElementById(connectedNextUp).getElementsByTagName('img')[0])) {
+							returnArray[5] = gateParse(connectedNextUp).slice(0, -4);
+						} else {
+							returnArray[5] = "bypass";
+						}
+					} else {
+						returnArray[5] = "result";
+					}
+
+					returnArray[6] = "unused";
+					returnArray[7] = "unused";
+					submitGate(returnArray);
+				} else if (parsedGate == "CCNOTGate") {
+					var conIndex = (divIndex - numGatesInRow);
+					var connected = "destDiv" + String(conIndex);
+					(document.getElementById(connected).getElementsByTagName('img')[0]).remove(); //remove bypass #1
+					conIndex = (divIndex - numGatesInRow * 2);
+					connected = "destDiv" + String(conIndex);
+					(document.getElementById(connected).getElementsByTagName('img')[0]).remove(); //remove bypass #2
+					(document.getElementById(data).getElementsByTagName('img')[0]).remove(); //remove gate
+					returnArray[1] = data;
+					connectedPrev = "destDiv" + String(Number(divIndex) - 1); //left and right gates
+					connectedNext = "destDiv" + String(Number(divIndex) + 1);
+					connectedPrevUp = "destDiv" + String(Number((divIndex) - numGatesInRow) - 1); //left and right gates one row up
+					connectedNextUp = "destDiv" + String(Number((divIndex) - numGatesInRow) + 1);
+					connectedPrevUp2 = "destDiv" + String(Number((divIndex) - numGatesInRow * 2) - 1); //left and right gates two rows up
+					connectedNextUp2 = "destDiv" + String(Number((divIndex) - numGatesInRow * 2) + 1);
+					if (document.getElementById(connectedPrev)) {
+						if ((document.getElementById(connectedPrev).getElementsByTagName('img')[0])) {
+							returnArray[2] = gateParse(connectedPrev).slice(0, -4); //gate is in last column
+						} else {
+							returnArray[2] = "bypass"; //no gate exists in this space
+						}
+					} else {
+						returnArray[2] = "input"; //gate is in first column
+					}
+
+					if (document.getElementById(connectedNext)) {
+						if ((document.getElementById(connectedNext).getElementsByTagName('img')[0])) {
+							returnArray[3] = gateParse(connectedNext).slice(0, -4);;
+						} else {
+							returnArray[3] = "bypass";
+						}
+
+					} else {
+						returnArray[3] = "result"; //gate is in last column
+					}
+					if (document.getElementById(connectedPrevUp)) {
+						if ((document.getElementById(connectedPrevUp).getElementsByTagName('img')[0])) {
+							returnArray[4] = gateParse(connectedPrevUp).slice(0, -4);
+						} else {
+							returnArray[4] = "bypass";
+						}
+					} else {
+						returnArray[4] = "input";
+					}
+
+					if (document.getElementById(connectedNextUp)) {
+						if ((document.getElementById(connectedNextUp).getElementsByTagName('img')[0])) {
+							returnArray[5] = gateParse(connectedNextUp).slice(0, -4);
+						} else {
+							returnArray[5] = "bypass";
+						}
+
+					} else {
+						returnArray[5] = "result";
+					}
+					if (document.getElementById(connectedPrevUp2)) {
+						if ((document.getElementById(connectedPrevUp2).getElementsByTagName('img')[0])) {
+							returnArray[6] = gateParse(connectedPrevUp2).slice(0, -4);
+						} else {
+							returnArray[6] = "bypass";
+						}
+					} else {
+						returnArray[6] = "input";
+					}
+
+					if (document.getElementById(connectedNextUp2)) {
+						if ((document.getElementById(connectedNextUp2).getElementsByTagName('img')[0])) {
+							returnArray[7] = gateParse(connectedNextUp2).slice(0, -4);
+						} else {
+							returnArray[7] = "bypass";
+						}
+
+					} else {
+						returnArray[7] = "result";
+					}
+
+					submitGate(returnArray);
+				} else {
+					//single qubit gate
+					(document.getElementById(data).getElementsByTagName('img')[0]).remove(); //remove gate
+					returnArray[1] = data;
+					connectedPrev = "destDiv" + String(Number(divIndex) - 1); //left and right gates
+					connectedNext = "destDiv" + String(Number(divIndex) + 1);
+					if (document.getElementById(connectedPrev)) {
+						if ((document.getElementById(connectedPrev).getElementsByTagName('img')[0])) {
+							returnArray[2] = (gateParse(connectedPrev)).slice(0, -4); //gate exists in this space
+						} else {
+							returnArray[2] = "bypass"; //no gate exists in this space
+						}
+					} else {
+						returnArray[2] = "input"; //gate is in first column
+					}
+
+					if (document.getElementById(connectedNext)) {
+						if ((document.getElementById(connectedNext).getElementsByTagName('img')[0])) {
+							returnArray[3] = (gateParse(connectedNext)).slice(0, -4);
+						} else {
+							returnArray[3] = "bypass";
+						}
+
+					} else {
+						returnArray[3] = "result"; //gate is in last column
+					}
+
+					returnArray[4] = "unused";
+					returnArray[5] = "unused";
+					returnArray[6] = "unused";
+					returnArray[7] = "unused";
+					submitGate(returnArray);
+				}
+			}
+		}
+
+		function copyDrop(ev) {
+			//drag and drop from source to destination
+			var numGatesInRow = 9;
+			ev.preventDefault();
+			var data = ev.dataTransfer.getData("text");
+			var startString = String(data).substring(0, 7); //ignore index
+			var subString = String(data).substring(0, 8);
+			var divIndex = String(ev.target.id);
+			divIndex = divIndex.substring(7, divIndex.length); //ignore 'destDiv'
+			var returnArray = new Array(8);//creates array of length 2
+			//dont allow startGates, and destGates to be copied
+			if (startString != "destDiv" && startString != "oneStar" && startString != "zeroStar") {
+				if (subString == "CNOT") {
+					if (Number(divIndex) > numGatesInRow) {
+						//only allow source divs to drop
+						var connected = "destDiv" + String(Number(divIndex) - numGatesInRow);
+						if (!(document.getElementById(ev.target.id).getElementsByTagName('img')[0] ||
+							document.getElementById(connected).getElementsByTagName('img')[0])) {
+							//only allow empty spaces to be dropped in
+							var nodeCopy = document.getElementById(data).cloneNode(true);
+							nodeCopy.id = ev.target.id;
+							ev.target.appendChild(nodeCopy);
+							//place CNOT gate
+
+							var nodeCopy = document.getElementById("spacerCNOT").cloneNode(true);
+							var connected = "destDiv" + String(Number(divIndex) - numGatesInRow);
+							nodeCopy.id = connected;
+							document.getElementById(connected).appendChild(nodeCopy);
+							//place CNOTspacer
+
+							//fill return array
+							returnArray[0] = data;
+							returnArray[1] = ev.target.id;
+							connectedPrev = "destDiv" + String(Number(divIndex) - 1);
+							connectedNext = "destDiv" + String(Number(divIndex) + 1);
+							connectedPrevUp = "destDiv" + String(Number((divIndex) - numGatesInRow) - 1);
+							connectedNextUp = "destDiv" + String(Number((divIndex) - numGatesInRow) + 1);
+							if (document.getElementById(connectedPrev)) {
+								if ((document.getElementById(connectedPrev).getElementsByTagName('img')[0])) {
+									returnArray[2] = gateParse(connectedPrev).slice(0, -4);
+								} else {
+									returnArray[2] = "bypass";
+								}
+							} else {
+								returnArray[2] = "input";
+							}
+
+							if (document.getElementById(connectedNext)) {
+								if ((document.getElementById(connectedNext).getElementsByTagName('img')[0])) {
+									returnArray[3] = gateParse(connectedNext).slice(0, -4);
+								} else {
+									returnArray[3] = "bypass";
+								}
+
+							} else {
+								returnArray[3] = "result";
+							}
+							if (document.getElementById(connectedPrevUp)) {
+								if ((document.getElementById(connectedPrevUp).getElementsByTagName('img')[0])) {
+									returnArray[4] = gateParse(connectedPrevUp).slice(0, -4);
+								} else {
+									returnArray[4] = "bypass";
+								}
+							} else {
+								returnArray[4] = "input";
+							}
+
+							if (document.getElementById(connectedNextUp)) {
+								if ((document.getElementById(connectedNextUp).getElementsByTagName('img')[0])) {
+									returnArray[5] = gateParse(connectedNextUp).slice(0, -4);
+								} else {
+									returnArray[5] = "bypass";
+								}
+
+							} else {
+								returnArray[5] = "result";
+							}
+
+							returnArray[6] = "unused";
+							returnArray[7] = "unused";
+							submitGate(returnArray);
+						}
+
+					} else {
+						alert("CNOT gates need to be placed in the bottom or middle row of gates")
+					}
+				} else if (subString == "CCNOT") {
+					if (Number(divIndex) > numGatesInRow * 2) {
+						//only allow source divs to drop
+						var connected = "destDiv" + String(Number(divIndex) - numGatesInRow);
+						var connected2 = "destDiv" + String(Number(divIndex) - numGatesInRow * 2);
+						if (!(document.getElementById(ev.target.id).getElementsByTagName('img')[0] ||
+							document.getElementById(connected).getElementsByTagName('img')[0] ||
+							document.getElementById(connected2).getElementsByTagName('img')[0])) {
+							//only allow empty spaces to be dropped in
+							var nodeCopy = document.getElementById(data).cloneNode(true);
+							nodeCopy.id = ev.target.id;
+							ev.target.appendChild(nodeCopy);
+							//place CCNOT gate
+
+							nodeCopy = document.getElementById("spacer2CCNOT").cloneNode(true);
+							nodeCopy.id = connected;
+							document.getElementById(connected).appendChild(nodeCopy);
+							//place CCNOTspacer1
+							nodeCopy = document.getElementById("spacer1CCNOT").cloneNode(true);
+							nodeCopy.id = connected2;
+							document.getElementById(connected2).appendChild(nodeCopy);
+							//place CCNOTspacer2
+
+							//fill return array
+							returnArray[0] = data;
+							returnArray[1] = ev.target.id;
+							connectedPrev = "destDiv" + String(Number(divIndex) - 1);
+							connectedNext = "destDiv" + String(Number(divIndex) + 1);
+							connectedPrevUp = "destDiv" + String(Number((divIndex) - numGatesInRow) - 1);
+							connectedNextUp = "destDiv" + String(Number((divIndex) - numGatesInRow) + 1);
+							connectedPrevUp2 = "destDiv" + String(Number((divIndex) - numGatesInRow * 2) - 1);
+							connectedNextUp2 = "destDiv" + String(Number((divIndex) - numGatesInRow * 2) + 1);
+							if (document.getElementById(connectedPrev)) {
+								if ((document.getElementById(connectedPrev).getElementsByTagName('img')[0])) {
+									returnArray[2] = gateParse(connectedPrev).slice(0, -4);
+								} else {
+									returnArray[2] = "bypass";
+								}
+							} else {
+								returnArray[2] = "input";
+							}
+
+							if (document.getElementById(connectedNext)) {
+								if ((document.getElementById(connectedNext).getElementsByTagName('img')[0])) {
+									returnArray[3] = gateParse(connectedNext).slice(0, -4);
+								} else {
+									returnArray[3] = "bypass";
+								}
+
+							} else {
+								returnArray[3] = "result";
+							}
+							if (document.getElementById(connectedPrevUp)) {
+								if ((document.getElementById(connectedPrevUp).getElementsByTagName('img')[0])) {
+									returnArray[4] = gateParse(connectedPrevUp).slice(0, -4);
+								} else {
+									returnArray[4] = "bypass";
+								}
+							} else {
+								returnArray[4] = "input";
+							}
+
+							if (document.getElementById(connectedNextUp)) {
+								if ((document.getElementById(connectedNextUp).getElementsByTagName('img')[0])) {
+									returnArray[5] = gateParse(connectedNextUp).slice(0, -4);
+								} else {
+									returnArray[5] = "bypass";
+								}
+
+							} else {
+								returnArray[5] = "result";
+							}
+							if (document.getElementById(connectedPrevUp2)) {
+								if ((document.getElementById(connectedPrevUp2).getElementsByTagName('img')[0])) {
+									returnArray[6] = gateParse(connectedPrevUp2).slice(0, -4);
+								} else {
+									returnArray[6] = "bypass";
+								}
+							} else {
+								returnArray[6] = "input";
+							}
+
+							if (document.getElementById(connectedNextUp2)) {
+								if ((document.getElementById(connectedNextUp2).getElementsByTagName('img')[0])) {
+									returnArray[7] = gateParse(connectedNextUp2).slice(0, -4);
+								} else {
+									returnArray[7] = "bypass";
+								}
+
+							} else {
+								returnArray[7] = "result";
+							}
+
+							submitGate(returnArray);
+						}
+					} else {
+						alert("CCNOT gates need to be placed in the bottom row of gates")
+					}
+				}
+				else {
+					//only allow source divs to drop
+					if (!(document.getElementById(ev.target.id).getElementsByTagName('img')[0])) {
+						//only allow empty spaces to be dropped in
+
+						//currently, only one type of each gate can be placed per column
+						var connected = new Array(4) //creates array of length 4
+						var conflictFlag = 0;
+						connected[0] = "destDiv" + String(Number(divIndex) - numGatesInRow * 2);
+						connected[1] = "destDiv" + String(Number(divIndex) - numGatesInRow);
+						connected[2] = "destDiv" + String(Number(divIndex) + numGatesInRow);
+						connected[3] = "destDiv" + String(Number(divIndex) + numGatesInRow * 2);
+
+						//check if same gate is in column
+						subString = subString + "GATE";
+						for (x = 0; x < 4; x++) {
+							if (document.getElementById(connected[x])) {
+								if ((document.getElementById(connected[x]).getElementsByTagName('img')[0])) {
+									if (gateParse(connected[x]).toUpperCase() == subString.toUpperCase()) {
+										conflictFlag = conflictFlag + 1;
+									}
+								}
+							}
+						}
+						//gate is unique in column
+						if (conflictFlag == 0) {
+							var nodeCopy = document.getElementById(data).cloneNode(true);
+							nodeCopy.id = ev.target.id;
+							ev.target.appendChild(nodeCopy);
+
+							connectedPrev = "destDiv" + String(Number(divIndex) - 1);
+							connectedNext = "destDiv" + String(Number(divIndex) + 1);
+							returnArray[0] = data;
+							returnArray[1] = ev.target.id;
+							if (document.getElementById(connectedPrev)) {
+								if ((document.getElementById(connectedPrev).getElementsByTagName('img')[0])) {
+									returnArray[2] = gateParse(connectedPrev).slice(0, -4);
+								} else {
+									returnArray[2] = "bypass";
+								}
+							} else {
+								returnArray[2] = "input";
+							}
+
+							if (document.getElementById(connectedNext)) {
+								if ((document.getElementById(connectedNext).getElementsByTagName('img')[0])) {
+									returnArray[3] = gateParse(connectedNext).slice(0, -4);
+								} else {
+									returnArray[3] = "bypass";
+								}
+
+							} else {
+								returnArray[3] = "result";
+							}
+
+							returnArray[4] = "unused";
+							returnArray[5] = "unused";
+							returnArray[6] = "unused";
+							returnArray[7] = "unused";
+							submitGate(returnArray);
+						} else {
+							alert("Only one gate of each type can be placed in one column")
+						}
+
+					}
+				}
+			}
+		}
+
+		function gateParse(p) {
+			//get name of gates
+			return (((((document.getElementById(p)).getElementsByTagName('img')[0]).src).replace(/^.*[\\\/]/, '')).slice(0, -4));
+		}
+
+		function refreshCircuit(p) {
+			location.reload();
+		}
+
+		function submitGate(gate) {
+			// ajax the JSON to the server
+			var JSONCircuit = JSON.stringify(gate);
+			$.post("receiver", JSONCircuit, function (data, status) {
+				//do stuff when server replies
+			});
+		}
+
+		function submitCircuit() {
+			var returnArray = new Array(8) //creates array of length 8
+
+			//fill returnArray
+			returnArray[0] = "output"
+			end1 = "destDiv9";
+			if ((document.getElementById(end1).getElementsByTagName('img')[0])) {
+				returnArray[1] = gateParse(end1).slice(0, -4);
+			} else {
+				returnArray[1] = "bypass";
+			}
+			end2 = "destDiv18";
+			if ((document.getElementById(end2).getElementsByTagName('img')[0])) {
+				returnArray[2] = gateParse(end2).slice(0, -4);
+			} else {
+				returnArray[2] = "bypass";
+			}
+			end3 = "destDiv27";
+			if ((document.getElementById(end3).getElementsByTagName('img')[0])) {
+				returnArray[3] = gateParse(end3).slice(0, -4);
+			} else {
+				returnArray[3] = "bypass";
+			}
+			returnArray[4] = "unused";
+			returnArray[5] = "unused";
+			returnArray[6] = "unused";
+			returnArray[7] = "unused";
+			var JSONCircuit = JSON.stringify(returnArray);
+			$.post("receiver", JSONCircuit, function (data, status) {
+				//assign probabilities to output graphs
+				var fields = data.split('~');
+				var out0 = fields[0];
+				var out1 = fields[1];
+				var out2 = fields[2];
+
+				updateProb("resultCan1", out0, 1 - out0);
+				updateProb("resultCan2", out1, 1 - out1);
+				updateProb("resultCan3", out2, 1 - out2);
+			});
+		}
+
+		function updateProb(graphName, probZero, probOne) {
+			//redraws on passed canvas
+			probZero = Math.round(probZero * 100) / 100
+			probOne = Math.round(probOne * 100) / 100
+			var newProbZero = 1 - probZero; //we are drawing 'upside down'
+			var newProbOne = 1 - probOne;
+			var canvas = document.getElementById(graphName);
+			var ctx = canvas.getContext("2d");
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+			var canvasDim = 85; //length and width of canvas
+			var startXZero = 10;
+			var startXOne = 55;
+			// receive number between .00 and .99
+			// min 15
+			// Result := ((Input - InputLow) / (InputHigh - InputLow)) * (OutputHigh - OutputLow) + OutputLow
+			var startYZero = ((newProbZero) / (1)) * (75 - 15) + 15;
+			var startYOne = ((newProbOne) / (1)) * (75 - 15) + 15;
+			// max 75
+			// range of 60
+			var radius = 5; //round corners
+			var width = 30; //width of column
+			var heightZero = (canvasDim - 10) - startYZero;
+			var heightOne = (canvasDim - 10) - startYOne;
+
+			ctx.fillStyle = "#FF0000";
+			ctx.fillStyle = "#2D10D1";
+			roundRect(ctx, startXZero, startYZero, width, heightZero, radius, true, false);
+			ctx.fillStyle = "#ef09b2";
+			roundRect(ctx, startXOne, startYOne, width, heightOne, radius, true, false);
+			ctx.fillStyle = "black";
+			ctx.textAlign = "center";
+			ctx.font = "13px Arial";
+
+			ctx.fillText("0", (width / 2) + 10, 85);
+			ctx.fillText("1", (width * 2) + 10, 85);
+			ctx.fillText(String(probZero), (width / 2) + 10, startYZero - 5);
+			ctx.fillText(String(probOne), (width * 2) + 10, startYOne - 5);
+		}
+
+		//draws rounded rectangle
+		//not mine
+		function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
+			if (typeof stroke == 'undefined') {
+				stroke = true;
+			}
+			if (typeof radius === 'undefined') {
+				radius = 5;
+			}
+			if (typeof radius === 'number') {
+				radius = { tl: radius, tr: radius, br: radius, bl: radius };
+			} else {
+				var defaultRadius = { tl: 0, tr: 0, br: 0, bl: 0 };
+				for (var side in defaultRadius) {
+					radius[side] = radius[side] || defaultRadius[side];
+				}
+			}
+			ctx.beginPath();
+			ctx.moveTo(x + radius.tl, y);
+			ctx.lineTo(x + width - radius.tr, y);
+			ctx.quadraticCurveTo(x + width, y, x + width, y + radius.tr);
+			ctx.lineTo(x + width, y + height - radius.br);
+			ctx.quadraticCurveTo(x + width, y + height, x + width - radius.br, y + height);
+			ctx.lineTo(x + radius.bl, y + height);
+			ctx.quadraticCurveTo(x, y + height, x, y + height - radius.bl);
+			ctx.lineTo(x, y + radius.tl);
+			ctx.quadraticCurveTo(x, y, x + radius.tl, y);
+			ctx.closePath();
+			if (fill) {
+				ctx.fill();
+			}
+			if (stroke) {
+				ctx.stroke();
+			}
+		}
+
+	</script>
+
+	<div id="background"></div>
+	<div style="background-color:#f7f8f9;padding:5px;">
+		<h1 style="font-family: 'Gugi'" style="font-size:300%;">
+			<center>
+				<font size="7" color=#0000CC>Quantum Gate Emulator</font>
+			</center>
+		</h1>
+	</div>
+
+	<div class="sidenav">
+		<table border="0" cellpadding="0" cellspacing="4">
+			<td>
+				<tr>
+					<td colspan="2">
+						<font size="4">
+							<center>Base States</center>
+						</font>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<div title="The zero start basis state" id="startSourceDiv">
+							<img src="/static/img/zeroStartGate.png" draggable="true" ondragstart="drag(event)" id="zeroStart" style="width:85px; height:85px; padding:0px; border:0px;">
+						</div>
+						<font size="2">
+							<center> State0</center>
+						</font>
+					</td>
+					<td>
+						<div title="The one start basis state" id="startSourceDiv">
+							<img src="/static/img/oneStartGate.png" draggable="true" ondragstart="drag(event)" id="oneStart" style="width:85px; height:85px; padding:0px; border:0px;">
+						</div>
+						<font size="2">
+							<center>State1</center>
+						</font>
+					</td>
+				</tr>
+				<tr class="blankRowSmall"></tr>
+				<tr>
+					<td colspan="2">
+						<font size="4">
+							<center>Single Qubit Gates</center>
+						</font>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<div title="The Pauli-X gate acts on a single qubit.
+It is the quantum equivalent of the NOT gate for
+classical computers. It equates to a rotation of the
+Bloch sphere around the X-axis by pi radians. It maps
+|0⟩ to |1⟩ and |1⟩ to |0⟩." id="sourceDiv">
+							<img src="/static/img/pauliXGate.gif" draggable="true" ondragstart="drag(event)" id="pauliX" style="width:85px; height:85px; padding:0px; border:0px;">
+							<font size="2">
+								<center>PauliX</center>
+							</font>
+						</div>
+					</td>
+					<td>
+						<div title="The Pauli-Y gate acts on a single qubit. 
+It equates to a rotation around the Y-axis of the 
+Bloch sphere by pi radians. It maps |0⟩ to i|1⟩ and
+|1⟩ to −i|0⟩" id="sourceDiv">
+							<img src="/static/img/pauliYGate.gif" draggable="true" ondragstart="drag(event)" id="pauliY" style="width:85px; height:85px; padding:0px; border:0px;">
+							<font size="2">
+								<center>PauliY</center>
+							</font>
+						</div>
+					</td>
+				</tr>
+				<tr class="blankRowSmall"></tr>
+				<tr>
+					<td>
+						<div title="The Pauli-Z gate acts on a single qubit.
+It equates to a rotation around the Z-axis of the Bloch
+sphere by pi radians. It leaves the base state |0⟩ unchanged
+and maps |1⟩ to -|1⟩" id="sourceDiv">
+							<img src="/static/img/pauliZGate.gif" draggable="true" ondragstart="drag(event)" id="pauliZ" style="width:85px; height:85px; padding:0px; border:0px;">
+							<font size="2">
+								<center>PauliZ</center>
+							</font>
+						</div>
+					</td>
+					<td>
+						<div title="The Hadamard gate acts on a single qubit.
+It maps the base state |0⟩ to (|0⟩ + |1⟩)/√2 and
+|1⟩ to (|0⟩ - |1⟩)/√2. It is the combinations of two rotations, 
+pi about the X-axis followed by pi/2 about the Y-axis " id="sourceDiv">
+							<img src="/static/img/hadamardGate.gif" draggable="true" ondragstart="drag(event)" id="hadamard" style="width:85px; height:85px; padding:0px; border:0px;">
+							<font size="2">
+								<center>Hadamard</center>
+							</font>
+						</div>
+					</td>
+				</tr>
+				<tr class="blankRowSmall"></tr>
+				<tr>
+					<td>
+						<div title="The Square Root of Not gate acts on a single qubit.
+It is the square root of the NOT gate." id="sourceDiv">
+							<img src="/static/img/sqrtNotGate.gif" draggable="true" ondragstart="drag(event)" id="sqrtNot" style="width:85px; height:85px; padding:0px; border:0px;">
+							<font size="2">
+								<center>SqrtNot</center>
+							</font>
+						</div>
+					</td>
+				</tr>
+				<tr class="blankRowSmall"></tr>
+				<tr>
+					<td colspan="2">
+						<font size="4">
+							<center>Multi Qubit Gates</center>
+						</font>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<div title="The CNOT gate operates on a quantum register consisting
+of 2 qubits. The CNOT gate flips the second qubit (the target qubit) if and only if the first qubit (the control bit) is |1⟩"
+						 id="sourceDiv">
+							<img src="/static/img/CNOTGate.gif" draggable="true" ondragstart="drag(event)" id="CNOT" style="width:85px; height:85px; padding:0px; border:0px;">
+							<font size="2">
+								<center>Cnot</center>
+							</font>
+						</div>
+					</td>
+					<td>
+						<div title="The CCNOT gate (Toffoli) is the same gate defined
+for 3 qubits. If the first two bits are in the state |1⟩, it applies a Pauli-X on the third bit, else it does nothing" id="sourceDiv">
+							<img src="/static/img/CCNOTGate.gif" draggable="true" ondragstart="drag(event)" id="CCNOT" style="width:85px; height:85px; padding:0px; border:0px;">
+							<font size="2">
+								<center>CCnot</center>
+							</font>
+						</div>
+					</td>
+				</tr>
+				<tr class="blankRowSmall"></tr>
+				<tr>
+					<td colspan="2">
+						<font size="4">
+							<center>Control Gates</center>
+						</font>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<div title="CNOT control - you cannot place this 'gate', 
+but it is automatically placed for you when you use a CNOT gate. It controls the state of the CNOT gate" id="sourceDiv">
+							<img src="/static/img/spacerCNOTGate.png" draggable="false" id="spacerCNOT" style="width:85px; height:85px; padding:0px; border:0px;">
+							<font size="2">
+								<center>CNOTControl</center>
+							</font>
+						</div>
+					</td>
+					<td>
+						<div title="CCNOT control - you cannot place this 'gate', 
+										but it is automatically placed for you when you use a CCNOT gate. It controls the state of the CCNOT gate" id="sourceDiv">
+							<img src="/static/img/spacer1CCNOTGate.png" draggable="false" id="spacer1CCNOT" style="width:85px; height:85px; padding:0px; border:0px;">
+							<font size="2">
+								<center>CCNOTControl</center>
+							</font>
+						</div>
+					</td>
+				</tr>
+				<tr class="blankRowSmall"></tr>
+				<tr>
+					<td>
+						<div title="CCNOT control - you cannot place this 'gate', 
+but it is automatically placed for you when you use a CCNOT gate. It controls the state of the CCNOT gate" id="sourceDiv">
+							<img src="/static/img/spacer2CCNOTGate.png" draggable="false" id="spacer2CCNOT" style="width:85px; height:85px; padding:0px; border:0px;">
+							<font size="2">
+								<center>CCNOTControl</center>
+							</font>
+						</div>
+					</td>
+				</tr>
+			</td>
+		</table>
+	</div>
+	<div>
+		<table class="table" border="0" cellpadding="0" cellspacing="0" align="center" background-image: url(
+		 '/static/img/background.png') background-repeat: no-repeat background-position: center top>
+			<tr class="blankRow"></tr>
+			<tr>
+				<td align="center">
+					<!--R1C1 -->
+					<div id="startDiv1" style="width:85px; height:85px; padding:0px; border:0px;" ondrop="startDrop(event, 'startDiv1')" ondragover="allowDrop(event)">
+						<img src="/static/img/zeroStartGate.png" width="85" height="85">
+					</div>
+				</td>
+				<td>
+					<!--R1C2 -->
+					<img src="/static/img/equals.gif" width="25" height="20">
+				</td>
+				<td>
+					<!--R1C3 -->
+					<div id="destDiv2" class="blankBack" style="width:85px; height:85px; padding:0px; border:0px;" ondrop="copyDrop(event)" ondragover="allowDrop(event)"></div>
+				</td>
+				<td>
+					<!--R1C4 -->
+					<img src="/static/img/equals.gif" width="25" height="20">
+				</td>
+				<td>
+					<!--R1C5 -->
+					<div id="destDiv3" class="blankBack" style="width:85px; height:85px; padding:0px; border:0px;" ondrop="copyDrop(event)" ondragover="allowDrop(event)"></div>
+				</td>
+				<td>
+					<!--R1C6 -->
+					<img src="/static/img/equals.gif" width="25" height="20">
+				</td>
+				<td>
+					<!--R1C7 -->
+					<div id="destDiv4" class="blankBack" style="width:85px; height:85px; padding:0px; border:0px;" ondrop="copyDrop(event)" ondragover="allowDrop(event)"></div>
+				</td>
+				<td>
+					<!--R1C8 -->
+					<img src="/static/img/equals.gif" width="25" height="20">
+				</td>
+				<td>
+					<!--R1C9 -->
+					<div id="destDiv5" class="blankBack" style="width:85px; height:85px; padding:0px; border:0px;" ondrop="copyDrop(event)" ondragover="allowDrop(event)"></div>
+				</td>
+				<td>
+					<!--R1C10 -->
+					<img src="/static/img/equals.gif" width="25" height="20">
+				</td>
+				<td>
+					<!--R1C11 -->
+					<div id="destDiv6" class="blankBack" style="width:85px; height:85px; padding:0px; border:0px;" ondrop="copyDrop(event)" ondragover="allowDrop(event)"></div>
+				</td>
+				<td>
+					<!--R1C12 -->
+					<img src="/static/img/equals.gif" width="25" height="20">
+				</td>
+				<td>
+					<!--R1C13 -->
+					<div id="destDiv7" class="blankBack" style="width:85px; height:85px; padding:0px; border:0px;" ondrop="copyDrop(event)" ondragover="allowDrop(event)"></div>
+				</td>
+				<td>
+					<!--R1C14 -->
+					<img src="/static/img/equals.gif" width="25" height="20">
+				</td>
+				<td>
+					<!--R1C15 -->
+					<div id="destDiv8" class="blankBack" style="width:85px; height:85px; padding:0px; border:0px;" ondrop="copyDrop(event)" ondragover="allowDrop(event)"></div>
+				</td>
+				<td>
+					<!--R1C16 -->
+					<img src="/static/img/equals.gif" width="25" height="20">
+				</td>
+				<td>
+					<!--R1C17 -->
+					<div id="destDiv9" class="blankBack" style="width:85px; height:85px; padding:0px; border:0px;" ondrop="copyDrop(event)" ondragover="allowDrop(event)"></div>
+				</td>
+				<td>
+					<!--R1C18 -->
+					<img src="/static/img/equals.gif" width="25" height="20">
+				</td>
+				<td>
+					<!--R1C19 -->
+					<div id="resultDiv1" style="width:85px; height:85px; padding:0px; border:0px;">
+						<!--<img id="resultDiv1Img" src="/static/img/questionGate.png" width="85" height="85">-->
+						<canvas id="resultCan1" width="85" height="85"></canvas>
+					</div>
+				</td>
+			</tr>
+
+			<tr>
+				<td align="center">
+					<!--R2C1 -->
+					<div id="startDiv10" style="width:85px; height:85px; padding:0px; border:0px;" ondrop="startDrop(event, 'startDiv10')" ondragover="allowDrop(event)">
+						<img src="/static/img/zeroStartGate.png" width="85" height="85">
+					</div>
+				</td>
+				<td>
+					<!--R2C2 -->
+					<img src="/static/img/equals.gif" width="25" height="20">
+				</td>
+				<td>
+					<!--R2C3 -->
+					<div id="destDiv11" class="blankBack" style="width:85px; height:85px; padding:0px; border:0px;" ondrop="copyDrop(event)"
+					 ondragover="allowDrop(event)"></div>
+				</td>
+				<td>
+					<!--R2C4 -->
+					<img src="/static/img/equals.gif" width="25" height="20">
+				</td>
+				<td>
+					<!--R2C5 -->
+					<div id="destDiv12" class="blankBack" style="width:85px; height:85px; padding:0px; border:0px;" ondrop="copyDrop(event)"
+					 ondragover="allowDrop(event)"></div>
+				</td>
+				<td>
+					<!--R2C6 -->
+					<img src="/static/img/equals.gif" width="25" height="20">
+				</td>
+				<td>
+					<!--R2C7 -->
+					<div id="destDiv13" class="blankBack" style="width:85px; height:85px; padding:0px; border:0px;" ondrop="copyDrop(event)"
+					 ondragover="allowDrop(event)"></div>
+				</td>
+				<td>
+					<!--R2C8 -->
+					<img src="/static/img/equals.gif" width="25" height="20">
+				</td>
+				<td>
+					<!--R2C9 -->
+					<div id="destDiv14" class="blankBack" style="width:85px; height:85px; padding:0px; border:0px;" ondrop="copyDrop(event)"
+					 ondragover="allowDrop(event)"></div>
+				</td>
+				<td>
+					<!--R2C10 -->
+					<img src="/static/img/equals.gif" width="25" height="20">
+				</td>
+				<td>
+					<!--R2C11 -->
+					<div id="destDiv15" class="blankBack" style="width:85px; height:85px; padding:0px; border:0px;" ondrop="copyDrop(event)"
+					 ondragover="allowDrop(event)"></div>
+				</td>
+				<td>
+					<!--R2C12 -->
+					<img src="/static/img/equals.gif" width="25" height="20">
+				</td>
+				<td>
+					<!--R2C13 -->
+					<div id="destDiv16" class="blankBack" style="width:85px; height:85px; padding:0px; border:0px;" ondrop="copyDrop(event)"
+					 ondragover="allowDrop(event)"></div>
+				</td>
+				<td>
+					<!--R2C14 -->
+					<img src="/static/img/equals.gif" width="25" height="20">
+				</td>
+				<td>
+					<!--R2C15 -->
+					<div id="destDiv17" class="blankBack" style="width:85px; height:85px; padding:0px; border:0px;" ondrop="copyDrop(event)"
+					 ondragover="allowDrop(event)"></div>
+				</td>
+				<td>
+					<!--R2C16 -->
+					<img src="/static/img/equals.gif" width="25" height="20">
+				</td>
+				<td>
+					<!--R2C17 -->
+					<div id="destDiv18" class="blankBack" style="width:85px; height:85px; padding:0px; border:0px;" ondrop="copyDrop(event)"
+					 ondragover="allowDrop(event)"></div>
+				</td>
+				<td>
+					<!--R2C18 -->
+					<img src="/static/img/equals.gif" width="25" height="20">
+				</td>
+				<td>
+					<!--R2C19 -->
+					<div id="resultDiv2" style="width:85px; height:85px; padding:0px; border:0px;">
+						<!--<img id="resultDiv2Img" src="/static/img/questionGate.png" width="85" height="85">-->
+						<canvas id="resultCan2" width="85" height="85"></canvas>
+					</div>
+				</td>
+			</tr>
+
+			<tr>
+				<td align="center">
+					<!--R3C1 -->
+					<div id="startDiv19" style="width:85px; height:85px; padding:0px; border:0px;" ondrop="startDrop(event, 'startDiv19')" ondragover="allowDrop(event)">
+						<img src="/static/img/zeroStartGate.png" width="85" height="85">
+					</div>
+				</td>
+				<td>
+					<!--R3C2 -->
+					<img src="/static/img/equals.gif" width="25" height="20">
+				</td>
+				<td>
+					<!--R3C3 -->
+					<div id="destDiv20" class="blankBack" style="width:85px; height:85px; padding:0px; border:0px;" ondrop="copyDrop(event)"
+					 ondragover="allowDrop(event)"></div>
+				</td>
+				<td>
+					<!--R3C4 -->
+					<img src="/static/img/equals.gif" width="25" height="20">
+				</td>
+				<td>
+					<!--R3C5 -->
+					<div id="destDiv21" class="blankBack" style="width:85px; height:85px; padding:0px; border:0px;" ondrop="copyDrop(event)"
+					 ondragover="allowDrop(event)"></div>
+				</td>
+				<td>
+					<!--R3C6 -->
+					<img src="/static/img/equals.gif" width="25" height="20">
+				</td>
+				<td>
+					<!--R3C7 -->
+					<div id="destDiv22" class="blankBack" style="width:85px; height:85px; padding:0px; border:0px;" ondrop="copyDrop(event)"
+					 ondragover="allowDrop(event)"></div>
+				</td>
+				<td>
+					<!--R3C8 -->
+					<img src="/static/img/equals.gif" width="25" height="20">
+				</td>
+				<td>
+					<!--R3C9 -->
+					<div id="destDiv23" class="blankBack" style="width:85px; height:85px; padding:0px; border:0px;" ondrop="copyDrop(event)"
+					 ondragover="allowDrop(event)"></div>
+				</td>
+				<td>
+					<!--R3C10 -->
+					<img src="/static/img/equals.gif" width="25" height="20">
+				</td>
+				<td>
+					<!--R3C11 -->
+					<div id="destDiv24" class="blankBack" style="width:85px; height:85px; padding:0px; border:0px;" ondrop="copyDrop(event)"
+					 ondragover="allowDrop(event)"></div>
+				</td>
+				<td>
+					<!--R3C12 -->
+					<img src="/static/img/equals.gif" width="25" height="20">
+				</td>
+				<td>
+					<!--R3C13 -->
+					<div id="destDiv25" class="blankBack" style="width:85px; height:85px; padding:0px; border:0px;" ondrop="copyDrop(event)"
+					 ondragover="allowDrop(event)"></div>
+				</td>
+				<td>
+					<!--R3C14 -->
+					<img src="/static/img/equals.gif" width="25" height="20">
+				</td>
+				<td>
+					<!--R3C15 -->
+					<div id="destDiv26" class="blankBack" style="width:85px; height:85px; padding:0px; border:0px;" ondrop="copyDrop(event)"
+					 ondragover="allowDrop(event)"></div>
+				</td>
+				<td>
+					<!--R3C16 -->
+					<img src="/static/img/equals.gif" width="25" height="20">
+				</td>
+				<td>
+					<!--R3C17 -->
+					<div id="destDiv27" class="blankBack" style="width:85px; height:85px; padding:0px; border:0px;" ondrop="copyDrop(event)"
+					 ondragover="allowDrop(event)"></div>
+				</td>
+				<td>
+					<!--R3C18 -->
+					<img src="/static/img/equals.gif" width="25" height="20">
+				</td>
+				<td>
+					<!--R3C19 -->
+					<div id="resultDiv3" style="width:85px; height:85px; padding:0px; border:0px;">
+						<!--<img id="resultDiv3Img" src="/static/img/questionGate.png" width="85" height="85">-->
+						<canvas id="resultCan3" width="85" height="85"></canvas>
+					</div>
+				</td>
+			</tr>
+			<tr class="blankRow">
+				<!--R4C1 -->
+				<td></td>
+			</tr>
+			<tr>
+				<td></td>
+				<td></td>
+				<td></td>
+				<td></td>
+				<td></td>
+				<td></td>
+				<td>
+					<!--R5C5 -->
+					<img id="startButton" src="/static/img/pinkStart.png" onclick="submitCircuit()" width=" 70 " height="70 ">
+				</td>
+				<td></td>
+				<td>
+					<!--R5C7 -->
+					<div title="Garbage Bin - drag gates here to remove them " id="sourceDiv " ondrop="drop(event) " ondragover="allowDrop(event) ">
+						<img src="/static/img/garbage.png " draggable="false " style="width:80px; height:80px; padding:0px; border:0px; ">
+					</div>
+				</td>
+				<td></td>
+				<td>
+					<!--R5C8 -->
+					<img src="/static/img/newPage.png " onclick="refreshCircuit()" width="70 " height="70 ">
+				</td>
+			</tr>
+			<tr>
+				<td></td>
+				<td></td>
+				<td></td>
+				<td></td>
+				<td></td>
+				<td></td>
+				<td>
+					<!--R6C5 -->
+					<font size="3">
+						<center>Run</center>
+					</font>
+				</td>
+				<td></td>
+				<td>
+					<!--R6C7 -->
+					<font size="3">
+						<center>Trash</center>
+					</font>
+				</td>
+				<td></td>
+				<td>
+					<!--R6C8 -->
+					<font size="3">
+						<center>New Circuit</center>
+					</font>
+				</td>
+			</tr>
+
+		</table>
+	</div>
+</body>
+
+</html>

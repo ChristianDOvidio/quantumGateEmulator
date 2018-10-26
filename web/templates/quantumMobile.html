@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<style>
+		* {
+			box-sizing: border-box;
+		}
+
+		#sourceDiv {
+			width: 90px;
+			height: 90px;
+			padding: 0px;
+			border: 0px solid #aaaaaa;
+		}
+
+		.table {
+			empty-cells: show;
+		}
+
+		.blankBack {
+			background-image: url(/static/img/blank.gif);
+		}
+
+		.rotate90 {
+			-webkit-transform: rotate(90deg);
+			-moz-transform: rotate(90deg);
+			-o-transform: rotate(90deg);
+			-ms-transform: rotate(90deg);
+			transform: rotate(90deg);
+		}
+	</style>
+</head>
+
+<body style="font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;" background="/static/img/grid.png">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+	<script type="text/javascript">
+
+		function gateParse(p) {
+			//get name of gates
+			return (((((document.getElementById(p)).getElementsByTagName('img')[0]).src).replace(/^.*[\\\/]/, '')).slice(0, -4));
+		}
+
+		function dropDownChange(source) {
+			var str = source.id
+			str = str.substring(0, str.length - 4);
+			if (document.getElementById(str).getElementsByTagName('img')[0]) {
+				(document.getElementById(str).getElementsByTagName('img')[0]).remove();
+				//only remove existing images
+			}
+			if (source.value != "") {
+				//only assign non null images
+				var nodeCopy = document.getElementById(source.value).cloneNode(true);
+				nodeCopy.id = str;
+				nodeCopy.style = "width:90px; height:90px; padding:0px; border:0px; display: inline";
+				document.getElementById(str).appendChild(nodeCopy);
+			}
+		}
+
+		function submitCircuit() {
+			//wait until server responds
+			document.getElementById("resultDiv").value = "Loading...";
+
+			var destDiv1 = "";
+			var destDiv2 = "";
+			var destDiv3 = "";
+			var destDiv4 = "";
+			var destDiv5 = "";
+			try {
+				var destDiv1 = gateParse("destDiv1");
+			} catch (err) { }
+			try {
+				var destDiv2 = gateParse("destDiv2");
+			} catch (err) { }
+			try {
+				var destDiv3 = gateParse("destDiv3");
+			} catch (err) { }
+			try {
+				var destDiv4 = gateParse("destDiv4");
+			} catch (err) { }
+			try {
+				var destDiv5 = gateParse("destDiv5");
+			} catch (err) { }
+			var wholeCircuit = { "1": String(destDiv1), "2": String(destDiv2), "3": String(destDiv3), "4": String(destDiv4), "5": String(destDiv5) }
+			var JSONCircuit = JSON.stringify(wholeCircuit);
+
+			// ajax the JSON to the server
+			$.post("receiver", JSONCircuit, function (data, status) {
+				//do stuff when server replies
+				document.getElementById("resultDiv").value = data;
+			});
+			// stop link reloading the page
+			event.preventDefault();
+		}
+	</script>
+
+	<div id="background"></div>
+	<div style="background-color:#f7f8f9;padding:15px;">
+		<h1>
+			<center> Quantum Gate Emulator </center>
+		</h1>
+	</div>
+
+	<p></p>
+
+
+
+	<table class="table" border="0" cellpadding="0" cellspacing="0" align="center" background-image: url(
+	 '/static/img/background.png') background-repeat: no-repeat background-position: center top>
+		<tr>
+			<td align="center">
+				<!--R1C1 -->
+				<img src="/static/img/zeroStartGate.png" width="90" height="90">
+			</td>
+		</tr>
+		<tr>
+			<td align="center">
+				<!--R2C1 -->
+				<img src="/static/img/equals.gif" width="25" height="35" class="rotate90">
+			</td>
+		</tr>
+		<tr>
+			<td align="center">
+				<!--R1C3 -->
+				<div id="destDiv1" class="blankBack" style="width:90px; height:90px; padding:0px; border:0px;" ondrop="copyDrop(event)" ondragover="allowDrop(event)"></div>
+			</td>
+		</tr>
+		<tr>
+			<td align="center">
+				<!--R3C1 -->
+				<select id="destDiv1Drop" name="Select a Gate" onchange="dropDownChange(this)">
+					<option value="">None</option>
+					<option value="pauliX">Pauli-X</option>
+					<option value="pauliY">Pauli-Y</option>
+					<option value="pauliZ">Pauli-Z</option>
+					<option value="hadamard">Hadamard</option>
+					<option value="sqrtNot">Sqrt Not</option>
+				</select>
+			</td>
+		</tr>
+		<tr>
+			<td align="center">
+				<!--R4C1 -->
+				<img src="/static/img/equals.gif" width="25" height="35" class="rotate90">
+			</td>
+		</tr>
+		<tr>
+			<td align="center">
+				<!--R1C3 -->
+				<div id="destDiv2" class="blankBack" style="width:90px; height:90px; padding:0px; border:0px;" ondrop="copyDrop(event)" ondragover="allowDrop(event)"></div>
+			</td>
+		</tr>
+		<tr>
+			<td align="center">
+				<!--R5C1 -->
+				<select id="destDiv2Drop" name="Select a Gate" onchange="dropDownChange(this)">
+					<option value="">None</option>
+					<option value="pauliX">Pauli-X</option>
+					<option value="pauliY">Pauli-Y</option>
+					<option value="pauliZ">Pauli-Z</option>
+					<option value="hadamard">Hadamard</option>
+					<option value="sqrtNot">Sqrt Not</option>
+				</select>
+			</td>
+		</tr>
+		<tr>
+			<td align="center">
+				<!--R6C1 -->
+				<img src="/static/img/equals.gif" width="25" height="35" class="rotate90">
+			</td>
+		</tr>
+		<tr>
+			<td align="center">
+				<!--R1C3 -->
+				<div id="destDiv3" class="blankBack" style="width:90px; height:90px; padding:0px; border:0px;" ondrop="copyDrop(event)" ondragover="allowDrop(event)"></div>
+			</td>
+		</tr>
+		<tr>
+			<td align="center">
+				<!--R7C1 -->
+				<select id="destDiv3Drop" name="Select a Gate" onchange="dropDownChange(this)">
+					<option value="">None</option>
+					<option value="pauliX">Pauli-X</option>
+					<option value="pauliY">Pauli-Y</option>
+					<option value="pauliZ">Pauli-Z</option>
+					<option value="hadamard">Hadamard</option>
+					<option value="sqrtNot">Sqrt Not</option>
+				</select>
+			</td>
+		</tr>
+		<tr>
+			<td align="center">
+				<!--R8C1 -->
+				<img src="/static/img/equals.gif" width="25" height="35" class="rotate90">
+			</td>
+		</tr>
+		<tr>
+			<td align="center">
+				<!--R1C3 -->
+				<div id="destDiv4" class="blankBack" style="width:90px; height:90px; padding:0px; border:0px;" ondrop="copyDrop(event)" ondragover="allowDrop(event)"></div>
+			</td>
+		</tr>
+		<tr>
+			<td align="center">
+				<!--R9C1 -->
+				<select id="destDiv4Drop" name="Select a Gate" onchange="dropDownChange(this)">
+					<option value="">None</option>
+					<option value="pauliX">Pauli-X</option>
+					<option value="pauliY">Pauli-Y</option>
+					<option value="pauliZ">Pauli-Z</option>
+					<option value="hadamard">Hadamard</option>
+					<option value="sqrtNot">Sqrt Not</option>
+				</select>
+			</td>
+		</tr>
+		<tr>
+			<td align="center">
+				<!--R10C1 -->
+				<img src="/static/img/equals.gif" width="25" height="35" class="rotate90">
+			</td>
+		</tr>
+		<tr>
+			<td align="center">
+				<!--R1C3 -->
+				<div id="destDiv5" class="blankBack" style="width:90px; height:90px; padding:0px; border:0px;" ondrop="copyDrop(event)" ondragover="allowDrop(event)"></div>
+			</td>
+		</tr>
+		<tr>
+			<td align="center">
+				<!--R11C1 -->
+				<select id="destDiv5Drop" name="Select a Gate" onchange="dropDownChange(this)">
+					<option value="">None</option>
+					<option value="pauliX">Pauli-X</option>
+					<option value="pauliY">Pauli-Y</option>
+					<option value="pauliZ">Pauli-Z</option>
+					<option value="hadamard">Hadamard</option>
+					<option value="sqrtNot">Sqrt Not</option>
+				</select>
+			</td>
+		</tr>
+		<tr>
+			<td align="center">
+				<!--R12C1 -->
+				<img src="/static/img/equals.gif" width="25" height="35" class="rotate90">
+			</td>
+		</tr>
+		<tr>
+			<td align="center">
+				<!--R13C1 -->
+				<input id="resultDiv" type="text " value="{{ output }} " style="width:90px; height:90px; " readonly>
+			</td>
+		</tr>
+		<tr>
+			<td align="center">
+				<!--R14C1 -->
+				<div>
+					<button type="button " onclick="submitCircuit() ">Submit Circuit!</button>
+				</div>
+			</td>
+		</tr>
+	</table>
+
+	<table border="0" cellpadding="0" cellspacing="0">
+		<tr>
+			<div id="sourceDiv">
+				<img src="/static/img/pauliXGate.gif" id="pauliX" style="width:90px; height:90px; padding:0px; border:0px; display: none;">
+			</div>
+		</tr>
+		<tr>
+			<div id="sourceDiv">
+				<img src="/static/img/pauliYGate.gif" id="pauliY" style="width:90px; height:90px; padding:0px; border:0px; display: none;">
+			</div>
+		</tr>
+		<tr>
+			<div id="sourceDiv">
+				<img src="/static/img/pauliZGate.gif" id="pauliZ" style="width:90px; height:90px; padding:0px; border:0px; display: none;">
+			</div>
+		</tr>
+		<tr>
+			<div id="sourceDiv">
+				<img src="/static/img/hadamardGate.gif" id="hadamard" style="width:90px; height:90px; padding:0px; border:0px; display: none;">
+			</div>
+		</tr>
+		<tr>
+			<div id="sourceDiv">
+				<img src="/static/img/sqrtNotGate.gif" id="sqrtNot" style="width:90px; height:90px; padding:0px; border:0px; display: none;">
+			</div>
+		</tr>
+	</table>
+
+</body>
+
+</html>
